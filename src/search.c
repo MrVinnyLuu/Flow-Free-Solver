@@ -71,9 +71,6 @@ void report_solution( const tree_node_t* node, const game_info_t* info ){
 		delay_seconds(1.0);
 }
 
-//////////////////////////////////////////////////////////////////////
-// Peforms Dijkstra  search
-
 int game_dijkstra_search(const game_info_t* info,
                 const game_state_t* init_state,
                 double* elapsed_out,
@@ -99,7 +96,7 @@ int game_dijkstra_search(const game_info_t* info,
 
 	//Enqueue root
 	heapq_enqueue(&pq, root);	
-	// int counter = 1;
+	
 	// While no solution found
 	while (result == SEARCH_IN_PROGRESS) {
 
@@ -119,12 +116,18 @@ int game_dijkstra_search(const game_info_t* info,
 			// Check move in that direction is possible
 			if (game_can_move(info, &parent->state, color, dir)) {
 				
-
 				// Create child node
 				tree_node_t* child = node_create(parent, info, &parent->state);
 
 				// Update child state given the direction
 				game_make_move(info, &child->state, color, dir);
+
+				// If no more space in memory, end search
+				if (heapq_count(&pq) >= max_nodes) {
+					result = SEARCH_FULL;
+					free(child);
+					break;
+				}
 
 				// Remove node if new position creates a deadend
 				if (g_options.node_check_deadends 
@@ -135,23 +138,13 @@ int game_dijkstra_search(const game_info_t* info,
 					
 				}
 
-				// printf("%d", counter++);
-				// game_print(info, &child->state);
-
 				// Check if game is solved
 				if (is_solved(child, info)) {          
 					result = SEARCH_SUCCESS;
 					solution_node = child;
 					*final_state = solution_node->state;
-					free(child);
+					if (!g_options.display_animate) free(child);
 					break;     
-				}
-
-				// If no more space in memory, end search
-				if (heapq_count(&pq) >= max_nodes) {
-					result = SEARCH_FULL;
-					free(child);
-					break;
 				}
 
 				// Add child to the queue
@@ -161,7 +154,7 @@ int game_dijkstra_search(const game_info_t* info,
 
 		}
 
-		free(parent);
+		if (!g_options.display_animate) free(parent);
 
 	}
 				
